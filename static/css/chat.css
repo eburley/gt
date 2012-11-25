@@ -62,9 +62,7 @@
   display: inline-block;
   padding-right: 10px;
 }
-#messages p:nth-child(even) {
-  background: #fafafa;
-}
+
 #messages #nicknames {
   background: #ccc;
   padding: 2px 4px 4px;
@@ -84,6 +82,11 @@
   border-radius: 10px;
   text-shadow: 0 1px 0 #666;
 }
+
+#messages #nicknames b.estimated {  
+  background: #9C9;
+}
+
 #messages #lines {
   height: 355px;
   overflow: auto;
@@ -173,7 +176,8 @@ button.hover {
   text-shadow: 0 -1px 1px #2c6bbb;
 }
 button:active,
-button.active {
+button.active,
+.number-button.pressed {
   background: #2e70c4;
   border: 1px solid #2e70c4;
   border-bottom: 1px solid #2861aa;
@@ -186,3 +190,53 @@ button.focus {
   -moz-box-shadow: 0 1px 0 0 rgba(255,255,255,0.4), 0 0 4px 0 #377ad0;
   box-shadow: 0 1px 0 0 rgba(255,255,255,0.4), 0 0 4px 0 #377ad0;
 }
+
+#reset_estimates {
+  float:right;
+}
+
+p.consensus, 
+p.disagreement 
+{
+  background: #CCC;
+  /*background: -webkit-gradient(linear, left top, left bottom, color-stop(0, #43a1f7), color-stop(1, #377ad0));
+  background: -webkit-linear-gradient(top, #43a1f7 0%, #377ad0 100%);
+  background: -moz-linear-gradient(top, #43a1f7 0%, #377ad0 100%);
+  background: linear-gradient(top, #43a1f7 0%, #377ad0 100%);*/
+  border: 1px solid #333;
+  -webkit-border-radius: 8px;
+  -moz-border-radius: 8px;
+  border-radius: 8px;
+  clear: both;
+  overflow: visible;
+}
+
+p.consensus {
+  background-color: #CFC;  
+}
+
+p.disagreement {
+  background-color: #FCC;  
+}
+
+.consensus span,
+.disagreement span { 
+  float: left;  
+  margin-right:20px;
+}
+
+.consensus span,
+.disagreement span.popular {
+  font-size:1.2em;
+}
+
+.disagreement span.meh {
+  font-size: 0.9em;
+}
+
+.disagreement span.outlier {
+  font-size:0.8em;
+}
+
+
+

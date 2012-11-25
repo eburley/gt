@@ -147,7 +147,7 @@ class BroadcastRoomsMixin(RoomsMixin):
 
 
 class ChatNamespace(BaseNamespace, BroadcastRoomsMixin, BroadcastMixin):
-    nicknames = []
+    room_nicknames = {}
     estimates = {}
 
     def initialize(self):
@@ -160,6 +160,7 @@ class ChatNamespace(BaseNamespace, BroadcastRoomsMixin, BroadcastMixin):
     def on_join(self, room):
         self.room = room
         self.join(room)
+        self.log('joined room')
         return True
 
     def _room_estimates(self):
@@ -168,36 +169,39 @@ class ChatNamespace(BaseNamespace, BroadcastRoomsMixin, BroadcastMixin):
             result = self.estimates[self.room] = Estimator()
         return result
 
-    def _count_people_in_room(self):
-        result = 0
-        room_name = self._get_room_name(self.room)
-        for socket in self.socket.server.sockets.itervalues():
-            if 'rooms' not in socket.session:
-                continue
-            if room_name in socket.session['rooms']:
-                result = result + 1
+    def _room_nicknames(self):
+        if not self.room:
+            return None
+        result = self.room_nicknames.get(self.room, None)
+        if not result:
+            result = self.room_nicknames[self.room] = []
         return result
 
     def on_nickname(self, nickname):
+        if not self.room:
+            self.log('room not set')
+            return False, ''
+        nicknames = self._room_nicknames()
         self.log('Nickname: {0}'.format(nickname))
-        self.nicknames.append(nickname)
+        nicknames.append(nickname)
+        self.log('Count: {0}'.format(len(nicknames)))
         self.session['nickname'] = nickname
-        self.broadcast_event('announcement', '%s has connected' % nickname)
-        self.broadcast_event('nicknames', self.nicknames)
+        self.emit_to_room(self.room, 'announcement', '%s has connected' % nickname)
+        self.broadcast_to_room(self.room, 'nicknames', nicknames)
         return True, nickname
 
     def recv_disconnect(self):
         # Remove nickname from the list.
         self.log('Disconnected')
-        nickname = self.session.get('nickname', None)
-        if nickname:
-            if nickname in self.nicknames:
-                self.nicknames.remove(nickname)
+        nickname = self.session.get('nickname', None)        
+        if self.room and nickname:
+            nicknames = self._room_nicknames()
+            if nickname in nicknames:
+                nicknames.remove(nickname)
             room_estimator = self._room_estimates()
             room_estimator.remove_estimate(nickname)
-            self.broadcast_event('announcement', '%s has disconnected' % nickname)
-            self.broadcast_event('nicknames', self.nicknames)        
-        if self.room:
+            self.emit_to_room(self.room, 'announcement', '%s has disconnected' % nickname)
+            self.broadcast_to_room(self.room, 'nicknames', nicknames)        
             self.leave(self.room)
         self.disconnect(silent=True)
         return True
@@ -207,7 +211,7 @@ class ChatNamespace(BaseNamespace, BroadcastRoomsMixin, BroadcastMixin):
         room_estimator.add_estimate(self.session['nickname'], estimate)
         self.log('User {0} estimated: {1}'.format(self.session['nickname'], estimate))
         self.log('estimates: {0}'.format(room_estimator.get_estimates()))
-        if self._count_people_in_room() <= room_estimator.count():
+        if len(self._room_nicknames()) <= room_estimator.count():
             self.broadcast_to_room(self.room, 'estimate_to_room',
                 room_estimator.get_estimates())
             room_estimator.clear()
@@ -215,13 +219,11 @@ class ChatNamespace(BaseNamespace, BroadcastRoomsMixin, BroadcastMixin):
             self.emit_to_room(self.room, 'estimate_submitted', self.session['nickname'])
 
     def on_clear_estimator(self):
-        self._room_estimates.clear()
-        self.broadcast_to_room(self.room, 'anouncement', '%s cleared estimates' % self.session['nickname'])
+        self._room_estimates().clear()
+        self.broadcast_to_room(self.room, 'estimates_cleared', self.session['nickname'])
         return True
 
-    def on_clear_my_estimate(self):
-        pass
-
+    
 
 @app.route('/socket.io/<path:remaining>')
 def socketio(remaining):
